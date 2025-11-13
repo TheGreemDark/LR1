@@ -1,3 +1,4 @@
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -9,47 +10,46 @@ class UserRepository:
         self.session: AsyncSession | None = None
 
     async def get_by_id(self, user_id: int) -> User | None:
-        query = select(User).where(User.id == user_id)
-        result = await self.session.execute(query)
-        return result.scalar_one_or_none()
+        stmt = select(User).where(User.id == user_id)
+        res = await self.session.execute(stmt)
+        return res.scalar_one_or_none()
 
-    async def get_by_filter(self, count: int | None = None, page: int | None = None, **kwargs) -> list[User]:
-        query = select(User)
-        if kwargs:
-            for key, value in kwargs.items():
-                if hasattr(User, key) and value is not None:
-                    query = query.where(getattr(User, key) == value)
-        
+    async def get_by_filter(self, count: int | None = None, page: int | None = None, **filters) -> list[User]:
+        stmt = select(User)
+        if filters:
+            for attr, val in filters.items():
+                if val is not None and hasattr(User, attr):
+                    stmt = stmt.where(getattr(User, attr) == val)
+
         if count is not None and page is not None:
-            offset = (page - 1) * count
-            query = query.offset(offset).limit(count)
-        
-        result = await self.session.execute(query)
-        return list(result.scalars().all())
+            stmt = stmt.offset((page - 1) * count).limit(count)
+
+        res = await self.session.execute(stmt)
+        return res.scalars().all()
 
     async def create(self, user_data: UserCreate) -> User:
+        user = User(
+            username=user_data.username,
+            email=user_data.email,
+            full_name=user_data.full_name,
+        )
+        self.session.add(user)
         try:
-            user = User(
-                username=user_data.username,
-                email=user_data.email,
-                full_name=user_data.full_name
-            )
-            self.session.add(user)
             await self.session.commit()
             await self.session.refresh(user)
             return user
-        except Exception as e:
+        except Exception as err:
             await self.session.rollback()
-            raise e
+            raise err
 
-    async def update(self, user_id: int, user_data: UserUpdate) -> User:
+    async def update(self, user_id: int, user_data: UserUpdate) -> User | None:
         user = await self.get_by_id(user_id)
-        if not user:
+        if user is None:
             return None
 
-        update_data = user_data.model_dump(exclude_unset=True)
-        for field, value in update_data.items():
-            setattr(user, field, value)
+        update_fields = user_data.model_dump(exclude_unset=True)
+        for key, value in update_fields.items():
+            setattr(user, key, value)
 
         await self.session.commit()
         await self.session.refresh(user)

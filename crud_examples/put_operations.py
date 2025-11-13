@@ -30,7 +30,7 @@ if __name__ == "__main__":
     # Проверяем существующего пользователя (например, с ID=1)
     response = requests.get("http://127.0.0.1:8000/users/1")
     if response.status_code == 200:
-        user_id = 4
+        user_id = 2
     else:
         # Если пользователь с ID=1 не найден, попробуем получить список всех пользователей
         response = requests.get("http://127.0.0.1:8000/users")

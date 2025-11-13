@@ -33,7 +33,7 @@ def check_user_exists(user_id: int) -> bool:
     return response.status_code == 200
 
 if __name__ == "__main__":
-    user_id = 3
+    user_id = 2
     
     # Проверить, существует ли пользователь
     if check_user_exists(user_id):
